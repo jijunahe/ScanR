@@ -20,8 +20,6 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.google.ar.core.Config
 import com.google.ar.core.TrackingState
 import io.github.sceneview.ar.ARSceneView
-import io.github.sceneview.ar.arcore.configure
-import io.github.sceneview.ar.arcore.isTrackingPlane
 
 @Composable
 fun ARCameraView(
@@ -42,15 +40,10 @@ fun ARCameraView(
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_RESUME -> {
-                    arSceneView?.onResume(lifecycleOwner)
                     onSessionResumed()
                 }
                 Lifecycle.Event.ON_PAUSE -> {
-                    arSceneView?.onPause(lifecycleOwner)
                     onSessionPaused()
-                }
-                Lifecycle.Event.ON_DESTROY -> {
-                    arSceneView?.onDestroy(lifecycleOwner)
                 }
                 else -> {}
             }
@@ -60,7 +53,7 @@ fun ARCameraView(
         
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            arSceneView?.onDestroy(lifecycleOwner)
+            arSceneView?.destroy()
         }
     }
     
@@ -126,17 +119,8 @@ fun ARCameraViewSimple(
     var sceneView by remember { mutableStateOf<ARSceneView?>(null) }
     
     DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_RESUME -> sceneView?.onResume(lifecycleOwner)
-                Lifecycle.Event.ON_PAUSE -> sceneView?.onPause(lifecycleOwner)
-                Lifecycle.Event.ON_DESTROY -> sceneView?.onDestroy(lifecycleOwner)
-                else -> {}
-            }
-        }
-        lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
-            lifecycleOwner.lifecycle.removeObserver(observer)
+            sceneView?.destroy()
         }
     }
     
