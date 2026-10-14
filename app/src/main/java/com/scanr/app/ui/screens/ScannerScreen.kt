@@ -908,7 +908,6 @@ fun ErrorOverlay(
     }
 }
 
-@Composable
 
 @Composable
 fun ARCameraViewWithCapture(
