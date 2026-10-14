@@ -5,15 +5,19 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -35,6 +39,7 @@ fun ARCameraView(
     val lifecycleOwner = LocalLifecycleOwner.current
     
     var arSceneView by remember { mutableStateOf<ARSceneView?>(null) }
+    var hasError by remember { mutableStateOf(false) }
     
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -45,6 +50,13 @@ fun ARCameraView(
                 Lifecycle.Event.ON_PAUSE -> {
                     onSessionPaused()
                 }
+                Lifecycle.Event.ON_DESTROY -> {
+                    try {
+                        arSceneView?.destroy()
+                    } catch (e: Exception) {
+                        // Ignore
+                    }
+                }
                 else -> {}
             }
         }
@@ -53,8 +65,28 @@ fun ARCameraView(
         
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            arSceneView?.destroy()
+            try {
+                arSceneView?.destroy()
+            } catch (e: Exception) {
+                // Ignore
+            }
         }
+    }
+    
+    if (hasError) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(Color.Black),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "Error al iniciar AR.\nVerifica que ARCore esté instalado.",
+                color = Color.White,
+                textAlign = TextAlign.Center
+            )
+        }
+        return
     }
     
     Box(
@@ -65,44 +97,44 @@ fun ARCameraView(
         AndroidView(
             modifier = Modifier.fillMaxSize(),
             factory = { ctx ->
-                ARSceneView(ctx).apply {
-                    arSceneView = this
-                    
-                    configureSession { session, config ->
-                        val isDepthSupported = session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)
-                        val isRawDepthSupported = session.isDepthModeSupported(Config.DepthMode.RAW_DEPTH_ONLY)
+                try {
+                    ARSceneView(ctx).apply {
+                        arSceneView = this
                         
-                        onDepthSupportChecked(isDepthSupported, isRawDepthSupported)
-                        
-                        config.apply {
-                            depthMode = if (isDepthSupported) {
-                                Config.DepthMode.AUTOMATIC
-                            } else {
-                                Config.DepthMode.DISABLED
-                            }
+                        sessionConfiguration = { session, config ->
+                            val isDepthSupported = session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)
+                            val isRawDepthSupported = session.isDepthModeSupported(Config.DepthMode.RAW_DEPTH_ONLY)
                             
-                            planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
-                            lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
-                            updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
-                            focusMode = Config.FocusMode.AUTO
+                            onDepthSupportChecked(isDepthSupported, isRawDepthSupported)
                             
-                            if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
-                                depthMode = Config.DepthMode.AUTOMATIC
+                            config.apply {
+                                depthMode = if (isDepthSupported) {
+                                    Config.DepthMode.AUTOMATIC
+                                } else {
+                                    Config.DepthMode.DISABLED
+                                }
+                                
+                                planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+                                lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
+                                updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
+                                focusMode = Config.FocusMode.AUTO
                             }
                         }
+                        
+                        onFrame = { frame ->
+                            try {
+                                onTrackingStateChanged(frame.camera.trackingState)
+                            } catch (e: Exception) {
+                                // Ignore
+                            }
+                        }
+                        
+                        onSessionCreated(this)
                     }
-                    
-                    onSessionCreated(this)
-                }
-            },
-            update = { view ->
-                view.session?.let { session ->
-                    try {
-                        val frame = session.update()
-                        onTrackingStateChanged(frame.camera.trackingState)
-                    } catch (e: Exception) {
-                        // Frame update might fail occasionally
-                    }
+                } catch (e: Exception) {
+                    hasError = true
+                    onError("Error: \${e.message}")
+                    View(ctx)
                 }
             }
         )
@@ -120,28 +152,36 @@ fun ARCameraViewSimple(
     
     DisposableEffect(lifecycleOwner) {
         onDispose {
-            sceneView?.destroy()
+            try {
+                sceneView?.destroy()
+            } catch (e: Exception) {
+                // Ignore
+            }
         }
     }
     
     AndroidView(
         modifier = modifier.fillMaxSize(),
         factory = { context ->
-            ARSceneView(context).apply {
-                sceneView = this
-                
-                configureSession { session, config ->
-                    config.depthMode = if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
-                        Config.DepthMode.AUTOMATIC
-                    } else {
-                        Config.DepthMode.DISABLED
+            try {
+                ARSceneView(context).apply {
+                    sceneView = this
+                    
+                    sessionConfiguration = { session, config ->
+                        config.depthMode = if (session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)) {
+                            Config.DepthMode.AUTOMATIC
+                        } else {
+                            Config.DepthMode.DISABLED
+                        }
+                        config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+                        config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
+                        config.focusMode = Config.FocusMode.AUTO
                     }
-                    config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
-                    config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
-                    config.focusMode = Config.FocusMode.AUTO
+                    
+                    onARSceneViewCreated(this)
                 }
-                
-                onARSceneViewCreated(this)
+            } catch (e: Exception) {
+                View(context)
             }
         }
     )
