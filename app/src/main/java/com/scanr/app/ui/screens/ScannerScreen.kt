@@ -35,6 +35,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
+import java.nio.ShortBuffer
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -52,7 +53,6 @@ fun ScannerScreen(
     var scanDuration by remember { mutableStateOf(0L) }
     var scanStartTime by remember { mutableStateOf(0L) }
     
-    // Diagnóstico
     var debugInfo by remember { mutableStateOf("Iniciando...") }
     var depthModeStatus by remember { mutableStateOf("Verificando...") }
     var depthImageStatus by remember { mutableStateOf("--") }
@@ -63,7 +63,6 @@ fun ScannerScreen(
     var lastDepthSize by remember { mutableStateOf("--") }
     var cameraInfo by remember { mutableStateOf("--") }
     
-    // Puntos
     val allPoints = remember { mutableStateListOf<Point3D>() }
     val renderer = remember { PointCloudRenderer() }
     
@@ -77,7 +76,6 @@ fun ScannerScreen(
         }
     }
     
-    // Exportar
     fun exportAndShare() {
         scope.launch {
             val points = allPoints.toList()
@@ -117,7 +115,6 @@ fun ScannerScreen(
     }
     
     Column(modifier = Modifier.fillMaxSize().background(Color(0xFF0A0A15))) {
-        // Barra superior
         Row(
             modifier = Modifier.fillMaxWidth().background(Color(0xFF1A1A2E)).padding(8.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
@@ -126,14 +123,13 @@ fun ScannerScreen(
             IconButton(onClick = onBackPressed) {
                 Icon(Icons.Default.ArrowBack, null, tint = Color.White)
             }
-            Text("ScanR Debug", color = Color.White, fontWeight = FontWeight.Bold)
+            Text("ScanR v2", color = Color.White, fontWeight = FontWeight.Bold)
             IconButton(onClick = { if (allPoints.isNotEmpty()) showExportDialog = true }) {
                 Icon(Icons.Default.Save, null, tint = Color.White)
             }
         }
         
         Row(modifier = Modifier.fillMaxWidth().weight(1f)) {
-            // Panel izquierdo: Cámara AR
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -142,7 +138,7 @@ fun ScannerScreen(
                     .clip(RoundedCornerShape(8.dp))
                     .border(2.dp, Color.Cyan, RoundedCornerShape(8.dp))
             ) {
-                DebugCameraView(
+                DepthCameraView(
                     modifier = Modifier.fillMaxSize(),
                     isScanning = isScanning,
                     onDebugInfo = { info -> debugInfo = info },
@@ -168,7 +164,6 @@ fun ScannerScreen(
                 )
             }
             
-            // Panel derecho: Vista 3D
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -197,7 +192,6 @@ fun ScannerScreen(
             }
         }
         
-        // Panel de diagnóstico
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -209,12 +203,12 @@ fun ScannerScreen(
             
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("Depth Mode:", color = Color.Gray, fontSize = 12.sp)
-                Text(depthModeStatus, color = if (depthModeStatus.contains("AUTO")) Color.Green else Color.Red, fontSize = 12.sp)
+                Text(depthModeStatus, color = if (depthModeStatus.contains("AUTO") || depthModeStatus.contains("OK")) Color.Green else Color.Red, fontSize = 12.sp)
             }
             
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("Depth Image:", color = Color.Gray, fontSize = 12.sp)
-                Text(depthImageStatus, color = if (depthImageStatus.contains("OK")) Color.Green else Color.Yellow, fontSize = 12.sp)
+                Text(depthImageStatus, color = if (depthImageStatus.contains("OK") || depthImageStatus.contains("pts")) Color.Green else Color.Yellow, fontSize = 12.sp)
             }
             
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -254,10 +248,9 @@ fun ScannerScreen(
                 Text("${allPoints.size}", color = Color.Yellow, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
             
-            Text(debugInfo, color = Color.Gray, fontSize = 10.sp, maxLines = 2)
+            Text(debugInfo, color = Color.Gray, fontSize = 10.sp, maxLines = 3)
         }
         
-        // Controles
         Row(
             modifier = Modifier.fillMaxWidth().padding(8.dp),
             horizontalArrangement = Arrangement.SpaceEvenly
@@ -292,16 +285,14 @@ fun ScannerScreen(
                 onClick = { if (allPoints.isNotEmpty()) showExportDialog = true },
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2196F3))
             ) {
-                Icon(Icons.Default.Save, null)
-                Spacer(Modifier.width(4.dp))
-                Text("Guardar")
+                Icon(Icons.Default.Share, null)
             }
         }
     }
 }
 
 @Composable
-fun DebugCameraView(
+fun DepthCameraView(
     modifier: Modifier,
     isScanning: Boolean,
     onDebugInfo: (String) -> Unit,
@@ -318,7 +309,7 @@ fun DebugCameraView(
     val lifecycleOwner = LocalLifecycleOwner.current
     var sceneView by remember { mutableStateOf<ARSceneView?>(null) }
     var lastCaptureTime by remember { mutableStateOf(0L) }
-    var configuredDepthMode by remember { mutableStateOf("NONE") }
+    var depthAvailable by remember { mutableStateOf(false) }
     
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -341,7 +332,6 @@ fun DebugCameraView(
                     sceneView = view
                     
                     view.sessionConfiguration = { session, config ->
-                        // Verificar soporte de Depth
                         val autoSupported = session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)
                         val rawSupported = session.isDepthModeSupported(Config.DepthMode.RAW_DEPTH_ONLY)
                         
@@ -350,18 +340,18 @@ fun DebugCameraView(
                         when {
                             autoSupported -> {
                                 config.depthMode = Config.DepthMode.AUTOMATIC
-                                configuredDepthMode = "AUTOMATIC"
-                                onDepthModeStatus("AUTOMATIC ✓")
+                                depthAvailable = true
+                                onDepthModeStatus("AUTOMATIC OK ✓")
                             }
                             rawSupported -> {
                                 config.depthMode = Config.DepthMode.RAW_DEPTH_ONLY
-                                configuredDepthMode = "RAW_DEPTH_ONLY"
-                                onDepthModeStatus("RAW ✓")
+                                depthAvailable = true
+                                onDepthModeStatus("RAW OK ✓")
                             }
                             else -> {
                                 config.depthMode = Config.DepthMode.DISABLED
-                                configuredDepthMode = "DISABLED"
-                                onDepthModeStatus("DISABLED ✗")
+                                depthAvailable = false
+                                onDepthModeStatus("NO DISPONIBLE ✗")
                             }
                         }
                         
@@ -373,34 +363,34 @@ fun DebugCameraView(
                     view.onSessionUpdated = { session, frame ->
                         onTrackingState(frame.camera.trackingState.name)
                         
-                        // Info de cámara
                         try {
                             val pose = frame.camera.pose
                             onCameraInfo("x:%.2f y:%.2f z:%.2f".format(pose.tx(), pose.ty(), pose.tz()))
                         } catch (e: Exception) {
-                            onCameraInfo("Error: ${e.message}")
+                            onCameraInfo("Error")
                         }
                         
                         if (isScanning && frame.camera.trackingState == TrackingState.TRACKING) {
                             val currentTime = System.currentTimeMillis()
-                            if (currentTime - lastCaptureTime > 200) { // 5 FPS para debug
+                            if (currentTime - lastCaptureTime > 150) {
                                 lastCaptureTime = currentTime
                                 
                                 val points = mutableListOf<Point3D>()
-                                var depthPointsThisFrame = 0
-                                var cloudPointsThisFrame = 0
+                                var depthPts = 0
+                                var cloudPts = 0
                                 
-                                // 1. Intentar Depth Image
-                                if (configuredDepthMode != "DISABLED") {
+                                // MÉTODO 1: acquireDepthImage (API estándar)
+                                if (depthAvailable) {
                                     try {
-                                        val depthImage = frame.acquireDepthImage16Bits()
+                                        val depthImage = frame.acquireDepthImage()
                                         if (depthImage != null) {
                                             val w = depthImage.width
                                             val h = depthImage.height
                                             onDepthImageSize("${w}x${h}")
                                             
                                             val plane = depthImage.planes[0]
-                                            val buffer = plane.buffer.asShortBuffer()
+                                            val buffer = plane.buffer
+                                            val rowStride = plane.rowStride
                                             
                                             val intrinsics = frame.camera.textureIntrinsics
                                             val fx = intrinsics.focalLength[0]
@@ -410,67 +400,72 @@ fun DebugCameraView(
                                             
                                             val cameraPose = frame.camera.pose
                                             
-                                            // Muestrear
-                                            val step = 16
+                                            val step = 8
                                             for (y in 0 until h step step) {
                                                 for (x in 0 until w step step) {
-                                                    val idx = y * w + x
-                                                    if (idx < buffer.capacity()) {
-                                                        val depthMm = buffer.get(idx).toInt() and 0xFFFF
+                                                    val byteIndex = y * rowStride + x * 2
+                                                    if (byteIndex + 1 < buffer.capacity()) {
+                                                        val low = buffer.get(byteIndex).toInt() and 0xFF
+                                                        val high = buffer.get(byteIndex + 1).toInt() and 0xFF
+                                                        val depthMm = (high shl 8) or low
                                                         val depthM = depthMm / 1000f
                                                         
-                                                        if (depthM > 0.2f && depthM < 3f) {
+                                                        if (depthM > 0.15f && depthM < 4f) {
                                                             val localX = (x - cx) * depthM / fx
                                                             val localY = -(y - cy) * depthM / fy
                                                             val localZ = -depthM
                                                             
-                                                            val worldX = cameraPose.tx() + localX
-                                                            val worldY = cameraPose.ty() + localY
-                                                            val worldZ = cameraPose.tz() + localZ
+                                                            val localPoint = floatArrayOf(localX, localY, localZ)
+                                                            val worldPoint = FloatArray(3)
+                                                            cameraPose.transformPoint(localPoint, 0, worldPoint, 0)
                                                             
-                                                            points.add(Point3D(worldX, worldY, worldZ, 1f))
-                                                            depthPointsThisFrame++
+                                                            points.add(Point3D(worldPoint[0], worldPoint[1], worldPoint[2], 1f))
+                                                            depthPts++
                                                         }
                                                     }
                                                 }
                                             }
                                             
                                             depthImage.close()
-                                            onDepthImageStatus("OK ($depthPointsThisFrame pts)")
+                                            onDepthImageStatus("OK: $depthPts pts")
                                         } else {
-                                            onDepthImageStatus("null")
+                                            onDepthImageStatus("null - sin imagen")
                                         }
+                                    } catch (e: com.google.ar.core.exceptions.NotYetAvailableException) {
+                                        onDepthImageStatus("Esperando...")
                                     } catch (e: Exception) {
-                                        onDepthImageStatus("Error: ${e.message?.take(30)}")
-                                        onDebugInfo("Depth error: ${e.message}")
+                                        onDepthImageStatus("Err: ${e.javaClass.simpleName}")
+                                        onDebugInfo("Depth: ${e.message}")
                                     }
                                 }
                                 
-                                // 2. PointCloud de ARCore
+                                // MÉTODO 2: PointCloud de ARCore
                                 try {
                                     frame.acquirePointCloud().use { pointCloud ->
-                                        val buffer = pointCloud.points
-                                        val numPoints = buffer.remaining() / 4
-                                        onPointCloudStatus("$numPoints puntos raw")
+                                        val pcBuffer = pointCloud.points
+                                        val numPoints = pcBuffer.remaining() / 4
+                                        onPointCloudStatus("$numPoints puntos")
                                         
-                                        while (buffer.hasRemaining()) {
-                                            val x = buffer.get()
-                                            val y = buffer.get()
-                                            val z = buffer.get()
-                                            val conf = buffer.get()
+                                        var count = 0
+                                        while (pcBuffer.hasRemaining() && count < 500) {
+                                            val px = pcBuffer.get()
+                                            val py = pcBuffer.get()
+                                            val pz = pcBuffer.get()
+                                            val conf = pcBuffer.get()
                                             
                                             if (conf > 0.3f) {
-                                                points.add(Point3D(x, y, z, conf))
-                                                cloudPointsThisFrame++
+                                                points.add(Point3D(px, py, pz, conf))
+                                                cloudPts++
                                             }
+                                            count++
                                         }
                                     }
                                 } catch (e: Exception) {
-                                    onPointCloudStatus("Error: ${e.message?.take(20)}")
+                                    onPointCloudStatus("Err: ${e.javaClass.simpleName}")
                                 }
                                 
-                                if (depthPointsThisFrame > 0) onDepthPointsCaptured(depthPointsThisFrame)
-                                if (cloudPointsThisFrame > 0) onCloudPointsCaptured(cloudPointsThisFrame)
+                                if (depthPts > 0) onDepthPointsCaptured(depthPts)
+                                if (cloudPts > 0) onCloudPointsCaptured(cloudPts)
                                 
                                 if (points.isNotEmpty()) {
                                     onPointsCaptured(points)
@@ -480,11 +475,11 @@ fun DebugCameraView(
                     }
                     
                     view.onSessionFailed = { e ->
-                        onDebugInfo("Session failed: ${e.message}")
+                        onDebugInfo("Session error: ${e.message}")
                     }
                 }
             } catch (e: Exception) {
-                onDebugInfo("Error init: ${e.message}")
+                onDebugInfo("Init error: ${e.message}")
                 android.view.View(context)
             }
         }
