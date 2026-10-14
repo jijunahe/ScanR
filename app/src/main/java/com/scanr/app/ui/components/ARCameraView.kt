@@ -121,7 +121,7 @@ fun ARCameraView(
                             }
                         }
                         
-                        onFrame = { frame ->
+                        onSessionUpdated = { _, frame ->
                             try {
                                 onTrackingStateChanged(frame.camera.trackingState)
                             } catch (e: Exception) {
