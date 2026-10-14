@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">ScanR</string>
+    
+    <!-- Permissions -->
+    <string name="camera_permission_required">Permiso de cámara requerido</string>
+    <string name="camera_permission_rationale">ScanR necesita acceso a la cámara para escanear objetos y generar mallas 3D.</string>
+    <string name="grant_permission">Conceder Permiso</string>
+    <string name="open_settings">Abrir Configuración</string>
+    
+    <!-- Scanning -->
+    <string name="start_scanning">Iniciar Escaneo</string>
+    <string name="stop_scanning">Detener Escaneo</string>
+    <string name="scanning">Escaneando...</string>
+    <string name="tap_to_scan">Toca para escanear</string>
+    <string name="save_mesh">Guardar Malla</string>
+    
+    <!-- ARCore Status -->
+    <string name="arcore_not_supported">ARCore no está soportado en este dispositivo</string>
+    <string name="arcore_not_installed">Por favor instala Google Play Services para AR</string>
+    <string name="arcore_update_required">Por favor actualiza Google Play Services para AR</string>
+    <string name="initializing_arcore">Iniciando ARCore...</string>
+    
+    <!-- Tracking Status -->
+    <string name="tracking_state_tracking">Rastreando</string>
+    <string name="tracking_state_paused">Pausado</string>
+    <string name="tracking_state_stopped">Detenido</string>
+    <string name="searching_surfaces">Buscando superficies...</string>
+    
+    <!-- Depth Support -->
+    <string name="depth_hardware">Sensor de profundidad detectado</string>
+    <string name="depth_hardware_desc">Hardware ToF/LiDAR disponible</string>
+    <string name="depth_software">Profundidad por software</string>
+    <string name="depth_software_desc">Estimación de profundidad activa</string>
+    <string name="depth_not_supported">Sin soporte de profundidad</string>
+    <string name="depth_not_supported_desc">El escaneo 3D será limitado</string>
+    <string name="depth_mode_hardware">Modo: Profundidad hardware</string>
+    <string name="depth_mode_software">Modo: Profundidad software</string>
+    
+    <!-- Instructions -->
+    <string name="instruction_move_slowly">Mueve el dispositivo lentamente para reanudar el rastreo</string>
+    <string name="instruction_point_camera">Apunta la cámara a una superficie bien iluminada</string>
+    
+    <!-- Errors -->
+    <string name="error_camera_not_available">Cámara no disponible</string>
+    <string name="error_arcore_generic">Error al inicializar ARCore</string>
+    <string name="retry">Reintentar</string>
+    <string name="exit">Salir</string>
+</resources>
