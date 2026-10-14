@@ -1,5 +1,6 @@
 package com.scanr.app.ui.screens
 
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -350,6 +351,7 @@ private fun PointSizeControl(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun InteractionHint(modifier: Modifier = Modifier) {
     var showHint by remember { mutableStateOf(true) }
