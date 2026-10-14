@@ -925,15 +925,15 @@ fun ARCameraViewWithCapture(
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             when (event) {
                 androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
-                    sceneView?.onResume(lifecycleOwner)
+                    // sceneView lifecycle handled by Sceneview
                     onSessionResumed()
                 }
                 androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> {
-                    sceneView?.onPause(lifecycleOwner)
+                    // sceneView lifecycle handled by Sceneview
                     onSessionPaused()
                 }
                 androidx.lifecycle.Lifecycle.Event.ON_DESTROY -> {
-                    sceneView?.onDestroy(lifecycleOwner)
+                    sceneView?.destroy()
                 }
                 else -> {}
             }
