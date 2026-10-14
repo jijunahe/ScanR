@@ -1,4 +1,5 @@
 package com.scanr.app.ui.screens
+import android.view.View
 
 import android.content.Intent
 import androidx.compose.animation.AnimatedContent
@@ -908,6 +909,8 @@ fun ErrorOverlay(
 }
 
 @Composable
+
+@Composable
 fun ARCameraViewWithCapture(
     modifier: Modifier = Modifier,
     isScanning: Boolean,
@@ -916,63 +919,119 @@ fun ARCameraViewWithCapture(
     onSessionPaused: () -> Unit = {},
     onTrackingStateChanged: (TrackingState) -> Unit = {},
     onDepthSupportChecked: (Boolean, Boolean) -> Unit = { _, _ -> },
-    onFrameUpdate: (com.google.ar.core.Frame) -> Unit = {}
+    onFrameUpdate: (com.google.ar.core.Frame) -> Unit = {},
+    onError: (String) -> Unit = {}
 ) {
     val lifecycleOwner = androidx.compose.ui.platform.LocalLifecycleOwner.current
     var sceneView by remember { mutableStateOf<ARSceneView?>(null) }
+    var hasError by remember { mutableStateOf(false) }
     
     androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
             when (event) {
                 androidx.lifecycle.Lifecycle.Event.ON_RESUME -> {
-                    // sceneView lifecycle handled by Sceneview
                     onSessionResumed()
                 }
                 androidx.lifecycle.Lifecycle.Event.ON_PAUSE -> {
-                    // sceneView lifecycle handled by Sceneview
                     onSessionPaused()
                 }
                 androidx.lifecycle.Lifecycle.Event.ON_DESTROY -> {
-                    sceneView?.destroy()
+                    try {
+                        sceneView?.destroy()
+                    } catch (e: Exception) {
+                        // Ignore destroy errors
+                    }
                 }
                 else -> {}
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+        onDispose { 
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            try {
+                sceneView?.destroy()
+            } catch (e: Exception) {
+                // Ignore
+            }
+        }
+    }
+    
+    if (hasError) {
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(Color.Black),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "Error al iniciar la cámara AR.\nVerifica que ARCore esté instalado.",
+                color = Color.White,
+                textAlign = TextAlign.Center
+            )
+        }
+        return
     }
     
     androidx.compose.ui.viewinterop.AndroidView(
         modifier = modifier.fillMaxSize(),
         factory = { context ->
-            ARSceneView(context).apply {
-                sceneView = this
-                configureSession { session, config ->
-                    val isDepthSupported = session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)
-                    val isRawDepthSupported = session.isDepthModeSupported(Config.DepthMode.RAW_DEPTH_ONLY)
-                    onDepthSupportChecked(isDepthSupported, isRawDepthSupported)
-                    config.apply {
-                        depthMode = if (isDepthSupported) Config.DepthMode.AUTOMATIC else Config.DepthMode.DISABLED
-                        planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
-                        lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
-                        updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
-                        focusMode = Config.FocusMode.AUTO
+            try {
+                ARSceneView(context).apply {
+                    sceneView = this
+                    
+                    // Configure session with error handling
+                    try {
+                        sessionConfiguration = { session, config ->
+                            val isDepthSupported = session.isDepthModeSupported(Config.DepthMode.AUTOMATIC)
+                            val isRawDepthSupported = session.isDepthModeSupported(Config.DepthMode.RAW_DEPTH_ONLY)
+                            onDepthSupportChecked(isDepthSupported, isRawDepthSupported)
+                            
+                            config.depthMode = if (isDepthSupported) {
+                                Config.DepthMode.AUTOMATIC
+                            } else {
+                                Config.DepthMode.DISABLED
+                            }
+                            config.planeFindingMode = Config.PlaneFindingMode.HORIZONTAL_AND_VERTICAL
+                            config.lightEstimationMode = Config.LightEstimationMode.ENVIRONMENTAL_HDR
+                            config.updateMode = Config.UpdateMode.LATEST_CAMERA_IMAGE
+                            config.focusMode = Config.FocusMode.AUTO
+                        }
+                    } catch (e: Exception) {
+                        onError("Error configurando sesión AR: \${e.message}")
                     }
-                }
-                onSessionUpdated = { _, frame ->
-                    onTrackingStateChanged(frame.camera.trackingState)
-                    if (isScanning && frame.camera.trackingState == TrackingState.TRACKING) {
-                        onFrameUpdate(frame)
+                    
+                    // Set frame update listener
+                    onFrame = { frame ->
+                        try {
+                            onTrackingStateChanged(frame.camera.trackingState)
+                            if (isScanning && frame.camera.trackingState == TrackingState.TRACKING) {
+                                onFrameUpdate(frame)
+                            }
+                        } catch (e: Exception) {
+                            // Ignore frame errors
+                        }
                     }
+                    
+                    onSessionCreated(this)
                 }
-                onSessionCreated(this)
+            } catch (e: Exception) {
+                hasError = true
+                onError("Error creando vista AR: \${e.message}")
+                // Return empty view
+                android.view.View(context)
             }
         },
         update = { view ->
-            view.onSessionUpdated = { _, frame ->
-                onTrackingStateChanged(frame.camera.trackingState)
-                if (isScanning && frame.camera.trackingState == TrackingState.TRACKING) {
-                    onFrameUpdate(frame)
+            if (view is ARSceneView) {
+                view.onFrame = { frame ->
+                    try {
+                        onTrackingStateChanged(frame.camera.trackingState)
+                        if (isScanning && frame.camera.trackingState == TrackingState.TRACKING) {
+                            onFrameUpdate(frame)
+                        }
+                    } catch (e: Exception) {
+                        // Ignore
+                    }
                 }
             }
         }
