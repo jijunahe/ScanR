@@ -75,6 +75,7 @@ import java.io.File
 import java.nio.ByteOrder
 import java.text.SimpleDateFormat
 import java.util.Date
+import java.util.EnumSet
 import java.util.Locale
 
 /**
@@ -404,22 +405,22 @@ private fun DepthCameraView(
                         }
 
                         val now = System.currentTimeMillis()
-                        if (now - state.lastCaptureMs < 120L) return@onSessionUpdated
-                        if (frame.camera.trackingState != TrackingState.TRACKING) return@onSessionUpdated
-                        state.lastCaptureMs = now
-
-                        val points = ArrayList<Point3D>(1500)
-                        val depthResult = sampleDepth(frame, points)
-                        val cloudCount = if (scanning) sampleFeaturePoints(frame, points) else 0
-
-                        mainHandler.post {
-                            onDepthImageStatus(depthResult.status)
-                            onDepthImageSize(depthResult.size)
-                            onPointCloudStatus(if (scanning) "$cloudCount pts" else "en pausa")
-                            if (scanning && points.isNotEmpty()) {
-                                if (depthResult.count > 0) onDepthPointsCaptured(depthResult.count)
-                                if (cloudCount > 0) onCloudPointsCaptured(cloudCount)
-                                onPointsCaptured(points)
+                        val ready = now - state.lastCaptureMs >= 120L &&
+                            frame.camera.trackingState == TrackingState.TRACKING
+                        if (ready) {
+                            state.lastCaptureMs = now
+                            val points = ArrayList<Point3D>(1500)
+                            val depthResult = sampleDepth(frame, points)
+                            val cloudCount = if (scanning) sampleFeaturePoints(frame, points) else 0
+                            mainHandler.post {
+                                onDepthImageStatus(depthResult.status)
+                                onDepthImageSize(depthResult.size)
+                                onPointCloudStatus(if (scanning) "$cloudCount pts" else "en pausa")
+                                if (scanning && points.isNotEmpty()) {
+                                    if (depthResult.count > 0) onDepthPointsCaptured(depthResult.count)
+                                    if (cloudCount > 0) onCloudPointsCaptured(cloudCount)
+                                    onPointsCaptured(points)
+                                }
                             }
                         }
                     }
@@ -458,7 +459,7 @@ private fun applyDepthConfig(session: Session, config: Config) {
 private fun enableDepthCamera(session: Session): String {
     return try {
         val filter = CameraConfigFilter(session).apply {
-            depthSensorUsage = CameraConfig.DepthSensorUsage.REQUIRE_AND_USE
+            depthSensorUsage = EnumSet.of(CameraConfig.DepthSensorUsage.REQUIRE_AND_USE)
         }
         val configs = session.getSupportedCameraConfigs(filter)
         if (configs.isEmpty()) {
