@@ -53,7 +53,8 @@
         <!-- ARCore metadata - required for ARCore apps -->
         <meta-data
             android:name="com.google.ar.core"
-            android:value="required" />
+            android:value="required"
+            tools:replace="android:value" />
 
         <!-- FileProvider for sharing exported 3D models -->
         <provider
