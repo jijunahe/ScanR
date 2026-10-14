@@ -6,12 +6,9 @@ import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,6 +27,7 @@ import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -39,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -52,6 +51,7 @@ import com.google.accompanist.permissions.shouldShowRationale
 import com.google.ar.core.ArCoreApk
 import com.scanr.app.ui.screens.ScannerScreen
 import com.scanr.app.ui.theme.ScanRTheme
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
 
@@ -61,6 +61,8 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
+        Log.d(TAG, "MainActivity onCreate iniciado")
         
         // Configurar manejador de excepciones global
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
@@ -142,7 +144,7 @@ fun ErrorScreen(
         Spacer(modifier = Modifier.height(8.dp))
         
         Text(
-            text = stackTrace.take(1500),
+            text = stackTrace.take(2000),
             style = MaterialTheme.typography.bodySmall,
             color = Color.Gray,
             modifier = Modifier
@@ -165,10 +167,15 @@ fun ScanRApp() {
     val context = LocalContext.current
     var arCoreStatus by remember { mutableStateOf<String?>(null) }
     var showScanner by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
+    var loadError by remember { mutableStateOf<String?>(null) }
+    
+    Log.d("ScanR", "ScanRApp composing, showScanner=$showScanner")
     
     // Verificar ARCore al iniciar
-    androidx.compose.runtime.LaunchedEffect(Unit) {
+    LaunchedEffect(Unit) {
         try {
+            Log.d("ScanR", "Verificando ARCore...")
             val availability = ArCoreApk.getInstance().checkAvailability(context)
             arCoreStatus = when (availability) {
                 ArCoreApk.Availability.SUPPORTED_INSTALLED -> "OK"
@@ -177,33 +184,110 @@ fun ScanRApp() {
                 ArCoreApk.Availability.UNSUPPORTED_DEVICE_NOT_CAPABLE -> "Dispositivo no compatible"
                 else -> "Verificando ARCore..."
             }
+            Log.d("ScanR", "ARCore status: $arCoreStatus")
         } catch (e: Exception) {
-            arCoreStatus = "Error verificando ARCore: ${e.message}"
+            Log.e("ScanR", "Error verificando ARCore", e)
+            arCoreStatus = "Error: ${e.message}"
         }
     }
     
     val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
 
     when {
-        arCoreStatus != null && arCoreStatus != "OK" && arCoreStatus != "Verificando ARCore..." -> {
-            // Mostrar error de ARCore
-            ARCoreErrorScreen(status = arCoreStatus!!)
+        loadError != null -> {
+            // Mostrar error de carga
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFF1A1A2E))
+                    .padding(16.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Error,
+                    contentDescription = null,
+                    modifier = Modifier.size(80.dp),
+                    tint = Color.Red
+                )
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Error al cargar escáner",
+                    style = MaterialTheme.typography.headlineSmall,
+                    color = Color.White
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = loadError ?: "",
+                    color = Color.Red,
+                    textAlign = TextAlign.Center
+                )
+                Spacer(modifier = Modifier.height(24.dp))
+                Button(onClick = { 
+                    loadError = null
+                    showScanner = false 
+                }) {
+                    Text("Volver")
+                }
+            }
         }
-        cameraPermissionState.status.isGranted -> {
-            if (showScanner) {
-                ScannerScreen()
-            } else {
-                WelcomeScreen(
-                    arCoreStatus = arCoreStatus,
-                    onStartScanner = { showScanner = true }
+        
+        isLoading -> {
+            // Pantalla de carga
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFF1A1A2E)),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
+            ) {
+                CircularProgressIndicator(color = Color.White)
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = "Iniciando cámara AR...",
+                    color = Color.White
                 )
             }
         }
+        
+        arCoreStatus != null && arCoreStatus != "OK" && arCoreStatus != "Verificando ARCore..." -> {
+            ARCoreErrorScreen(status = arCoreStatus!!)
+        }
+        
+        cameraPermissionState.status.isGranted -> {
+            if (showScanner) {
+                Log.d("ScanR", "Mostrando ScannerScreen")
+                try {
+                    ScannerScreen(
+                        onBackPressed = { 
+                            Log.d("ScanR", "Back pressed en ScannerScreen")
+                            showScanner = false 
+                        }
+                    )
+                } catch (e: Exception) {
+                    Log.e("ScanR", "Error en ScannerScreen", e)
+                    loadError = e.message ?: "Error desconocido"
+                }
+            } else {
+                WelcomeScreen(
+                    arCoreStatus = arCoreStatus,
+                    onStartScanner = { 
+                        Log.d("ScanR", "Botón Iniciar Escaneo presionado")
+                        Toast.makeText(context, "Iniciando escáner...", Toast.LENGTH_SHORT).show()
+                        isLoading = true
+                        showScanner = true
+                        isLoading = false
+                    }
+                )
+            }
+        }
+        
         cameraPermissionState.status.shouldShowRationale -> {
             PermissionRationaleScreen(
                 onRequestPermission = { cameraPermissionState.launchPermissionRequest() }
             )
         }
+        
         else -> {
             PermissionRequestScreen(
                 onRequestPermission = { cameraPermissionState.launchPermissionRequest() },
@@ -249,15 +333,6 @@ fun ARCoreErrorScreen(status: String) {
             style = MaterialTheme.typography.bodyLarge,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.error
-        )
-        
-        Spacer(modifier = Modifier.height(24.dp))
-        
-        Text(
-            text = "Esta aplicación requiere Google Play Services para RA (ARCore) para funcionar.",
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
 }
@@ -340,7 +415,7 @@ fun PermissionRationaleScreen(onRequestPermission: () -> Unit) {
         Spacer(modifier = Modifier.height(16.dp))
 
         Text(
-            text = "ScanR necesita acceso a la cámara para escanear objetos en 3D usando realidad aumentada.",
+            text = "ScanR necesita acceso a la cámara para escanear objetos en 3D.",
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center
         )
