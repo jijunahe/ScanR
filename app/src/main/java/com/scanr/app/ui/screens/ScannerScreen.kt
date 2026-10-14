@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FiberManualRecord
 import androidx.compose.material.icons.filled.Info
@@ -41,7 +42,6 @@ import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material.icons.filled.ThreeDRotation
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -666,7 +666,7 @@ private fun MainScanButton(
                     label = "button_icon"
                 ) { scanning ->
                     Icon(
-                        imageVector = if (scanning) Icons.Default.Stop else Icons.Default.ThreeDRotation,
+                        imageVector = if (scanning) Icons.Default.Stop else Icons.Default.CameraAlt,
                         contentDescription = if (scanning) "Detener" else "Escanear",
                         modifier = Modifier.size(36.dp)
                     )
@@ -722,7 +722,7 @@ fun ScanCompletedOverlay(
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
-                        imageVector = Icons.Default.ThreeDRotation,
+                        imageVector = Icons.Default.CameraAlt,
                         contentDescription = null,
                         modifier = Modifier.size(40.dp),
                         tint = Color.White
