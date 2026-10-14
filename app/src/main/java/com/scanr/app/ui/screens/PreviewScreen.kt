@@ -18,13 +18,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CenterFocusStrong
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Save
-import androidx.compose.material.icons.filled.ThreeDRotation
 import androidx.compose.material.icons.filled.TouchApp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -220,7 +220,7 @@ private fun StatsCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(
-                    imageVector = Icons.Default.ThreeDRotation,
+                    imageVector = Icons.Default.CameraAlt,
                     contentDescription = null,
                     tint = Color(0xFF4FC3F7),
                     modifier = Modifier.size(24.dp)
@@ -445,7 +445,7 @@ fun EmptyPreviewScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Icon(
-                imageVector = Icons.Default.ThreeDRotation,
+                imageVector = Icons.Default.CameraAlt,
                 contentDescription = null,
                 modifier = Modifier.size(80.dp),
                 tint = Color.White.copy(alpha = 0.5f)
@@ -484,7 +484,7 @@ fun EmptyPreviewScreen(
                 
                 Button(onClick = onNewScan) {
                     Icon(
-                        imageVector = Icons.Default.ThreeDRotation,
+                        imageVector = Icons.Default.CameraAlt,
                         contentDescription = null,
                         modifier = Modifier.size(18.dp)
                     )
