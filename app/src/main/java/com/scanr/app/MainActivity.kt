@@ -51,7 +51,6 @@ import com.google.accompanist.permissions.shouldShowRationale
 import com.google.ar.core.ArCoreApk
 import com.scanr.app.ui.screens.ScannerScreen
 import com.scanr.app.ui.theme.ScanRTheme
-import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
 
@@ -64,7 +63,6 @@ class MainActivity : ComponentActivity() {
         
         Log.d(TAG, "MainActivity onCreate iniciado")
         
-        // Configurar manejador de excepciones global
         Thread.setDefaultUncaughtExceptionHandler { thread, throwable ->
             Log.e(TAG, "Error no capturado: ${throwable.message}", throwable)
             runOnUiThread {
@@ -136,14 +134,6 @@ fun ErrorScreen(
         Spacer(modifier = Modifier.height(24.dp))
         
         Text(
-            text = "Detalles técnicos:",
-            style = MaterialTheme.typography.labelMedium,
-            color = Color.Gray
-        )
-        
-        Spacer(modifier = Modifier.height(8.dp))
-        
-        Text(
             text = stackTrace.take(2000),
             style = MaterialTheme.typography.bodySmall,
             color = Color.Gray,
@@ -167,116 +157,43 @@ fun ScanRApp() {
     val context = LocalContext.current
     var arCoreStatus by remember { mutableStateOf<String?>(null) }
     var showScanner by remember { mutableStateOf(false) }
-    var isLoading by remember { mutableStateOf(false) }
-    var loadError by remember { mutableStateOf<String?>(null) }
     
-    Log.d("ScanR", "ScanRApp composing, showScanner=$showScanner")
+    Log.d("ScanR", "ScanRApp: showScanner=$showScanner")
     
-    // Verificar ARCore al iniciar
     LaunchedEffect(Unit) {
-        try {
-            Log.d("ScanR", "Verificando ARCore...")
-            val availability = ArCoreApk.getInstance().checkAvailability(context)
-            arCoreStatus = when (availability) {
-                ArCoreApk.Availability.SUPPORTED_INSTALLED -> "OK"
-                ArCoreApk.Availability.SUPPORTED_NOT_INSTALLED -> "ARCore no instalado"
-                ArCoreApk.Availability.SUPPORTED_APK_TOO_OLD -> "ARCore necesita actualización"
-                ArCoreApk.Availability.UNSUPPORTED_DEVICE_NOT_CAPABLE -> "Dispositivo no compatible"
-                else -> "Verificando ARCore..."
-            }
-            Log.d("ScanR", "ARCore status: $arCoreStatus")
-        } catch (e: Exception) {
-            Log.e("ScanR", "Error verificando ARCore", e)
-            arCoreStatus = "Error: ${e.message}"
+        val availability = ArCoreApk.getInstance().checkAvailability(context)
+        arCoreStatus = when (availability) {
+            ArCoreApk.Availability.SUPPORTED_INSTALLED -> "OK"
+            ArCoreApk.Availability.SUPPORTED_NOT_INSTALLED -> "ARCore no instalado"
+            ArCoreApk.Availability.SUPPORTED_APK_TOO_OLD -> "ARCore necesita actualización"
+            ArCoreApk.Availability.UNSUPPORTED_DEVICE_NOT_CAPABLE -> "Dispositivo no compatible"
+            else -> "Verificando..."
         }
+        Log.d("ScanR", "ARCore: $arCoreStatus")
     }
     
     val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
 
     when {
-        loadError != null -> {
-            // Mostrar error de carga
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFF1A1A2E))
-                    .padding(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Error,
-                    contentDescription = null,
-                    modifier = Modifier.size(80.dp),
-                    tint = Color.Red
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Error al cargar escáner",
-                    style = MaterialTheme.typography.headlineSmall,
-                    color = Color.White
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = loadError ?: "",
-                    color = Color.Red,
-                    textAlign = TextAlign.Center
-                )
-                Spacer(modifier = Modifier.height(24.dp))
-                Button(onClick = { 
-                    loadError = null
-                    showScanner = false 
-                }) {
-                    Text("Volver")
-                }
-            }
-        }
-        
-        isLoading -> {
-            // Pantalla de carga
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color(0xFF1A1A2E)),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                CircularProgressIndicator(color = Color.White)
-                Spacer(modifier = Modifier.height(16.dp))
-                Text(
-                    text = "Iniciando cámara AR...",
-                    color = Color.White
-                )
-            }
-        }
-        
-        arCoreStatus != null && arCoreStatus != "OK" && arCoreStatus != "Verificando ARCore..." -> {
+        arCoreStatus != null && arCoreStatus != "OK" && arCoreStatus != "Verificando..." -> {
             ARCoreErrorScreen(status = arCoreStatus!!)
         }
         
         cameraPermissionState.status.isGranted -> {
             if (showScanner) {
-                Log.d("ScanR", "Mostrando ScannerScreen")
-                try {
-                    ScannerScreen(
-                        onBackPressed = { 
-                            Log.d("ScanR", "Back pressed en ScannerScreen")
-                            showScanner = false 
-                        }
-                    )
-                } catch (e: Exception) {
-                    Log.e("ScanR", "Error en ScannerScreen", e)
-                    loadError = e.message ?: "Error desconocido"
-                }
+                Log.d("ScanR", "Renderizando ScannerScreen...")
+                ScannerScreen(
+                    onBackPressed = { 
+                        showScanner = false 
+                    }
+                )
             } else {
                 WelcomeScreen(
                     arCoreStatus = arCoreStatus,
                     onStartScanner = { 
-                        Log.d("ScanR", "Botón Iniciar Escaneo presionado")
-                        Toast.makeText(context, "Iniciando escáner...", Toast.LENGTH_SHORT).show()
-                        isLoading = true
+                        Log.d("ScanR", "Boton presionado!")
+                        Toast.makeText(context, "Iniciando...", Toast.LENGTH_SHORT).show()
                         showScanner = true
-                        isLoading = false
                     }
                 )
             }
@@ -317,35 +234,17 @@ fun ARCoreErrorScreen(status: String) {
             modifier = Modifier.size(80.dp),
             tint = MaterialTheme.colorScheme.error
         )
-        
         Spacer(modifier = Modifier.height(24.dp))
-        
-        Text(
-            text = "Problema con ARCore",
-            style = MaterialTheme.typography.headlineMedium,
-            textAlign = TextAlign.Center
-        )
-        
+        Text(text = "Problema con ARCore", style = MaterialTheme.typography.headlineMedium)
         Spacer(modifier = Modifier.height(16.dp))
-        
-        Text(
-            text = status,
-            style = MaterialTheme.typography.bodyLarge,
-            textAlign = TextAlign.Center,
-            color = MaterialTheme.colorScheme.error
-        )
+        Text(text = status, color = MaterialTheme.colorScheme.error)
     }
 }
 
 @Composable
-fun WelcomeScreen(
-    arCoreStatus: String?,
-    onStartScanner: () -> Unit
-) {
+fun WelcomeScreen(arCoreStatus: String?, onStartScanner: () -> Unit) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
+        modifier = Modifier.fillMaxSize().padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -355,22 +254,10 @@ fun WelcomeScreen(
             modifier = Modifier.size(100.dp),
             tint = MaterialTheme.colorScheme.primary
         )
-
         Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = "ScanR",
-            style = MaterialTheme.typography.headlineLarge
-        )
-
+        Text(text = "ScanR", style = MaterialTheme.typography.headlineLarge)
         Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = "Escaneo 3D con ARCore",
-            style = MaterialTheme.typography.bodyLarge,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-        
+        Text(text = "Escaneo 3D con ARCore", color = MaterialTheme.colorScheme.onSurfaceVariant)
         if (arCoreStatus != null) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
@@ -379,9 +266,7 @@ fun WelcomeScreen(
                 color = if (arCoreStatus == "OK") Color.Green else Color.Yellow
             )
         }
-
         Spacer(modifier = Modifier.height(32.dp))
-
         Button(onClick = onStartScanner) {
             Text("Iniciar Escaneo")
         }
@@ -391,88 +276,35 @@ fun WelcomeScreen(
 @Composable
 fun PermissionRationaleScreen(onRequestPermission: () -> Unit) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
+        modifier = Modifier.fillMaxSize().padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = Icons.Default.Camera,
-            contentDescription = null,
-            modifier = Modifier.size(80.dp),
-            tint = MaterialTheme.colorScheme.primary
-        )
-
+        Icon(imageVector = Icons.Default.Camera, contentDescription = null, modifier = Modifier.size(80.dp))
         Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = "Permiso de Cámara Requerido",
-            style = MaterialTheme.typography.headlineSmall,
-            textAlign = TextAlign.Center
-        )
-
+        Text(text = "Permiso de Cámara Requerido", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "ScanR necesita acceso a la cámara para escanear objetos en 3D.",
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center
-        )
-
+        Text(text = "ScanR necesita acceso a la cámara.", textAlign = TextAlign.Center)
         Spacer(modifier = Modifier.height(24.dp))
-
-        Button(onClick = onRequestPermission) {
-            Text("Conceder Permiso")
-        }
+        Button(onClick = onRequestPermission) { Text("Conceder Permiso") }
     }
 }
 
 @Composable
-fun PermissionRequestScreen(
-    onRequestPermission: () -> Unit,
-    onOpenSettings: () -> Unit
-) {
+fun PermissionRequestScreen(onRequestPermission: () -> Unit, onOpenSettings: () -> Unit) {
     Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(32.dp),
+        modifier = Modifier.fillMaxSize().padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(
-            imageVector = Icons.Default.Warning,
-            contentDescription = null,
-            modifier = Modifier.size(80.dp),
-            tint = MaterialTheme.colorScheme.error
-        )
-
+        Icon(imageVector = Icons.Default.Warning, contentDescription = null, modifier = Modifier.size(80.dp), tint = MaterialTheme.colorScheme.error)
         Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = "Permiso de Cámara Necesario",
-            style = MaterialTheme.typography.headlineSmall,
-            textAlign = TextAlign.Center
-        )
-
+        Text(text = "Permiso de Cámara Necesario", style = MaterialTheme.typography.headlineSmall)
         Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = "Para usar ScanR, necesitas permitir el acceso a la cámara.",
-            style = MaterialTheme.typography.bodyMedium,
-            textAlign = TextAlign.Center
-        )
-
+        Text(text = "Para usar ScanR, necesitas permitir el acceso a la cámara.", textAlign = TextAlign.Center)
         Spacer(modifier = Modifier.height(24.dp))
-
-        Button(onClick = onRequestPermission) {
-            Text("Solicitar Permiso")
-        }
-
+        Button(onClick = onRequestPermission) { Text("Solicitar Permiso") }
         Spacer(modifier = Modifier.height(16.dp))
-
-        Button(onClick = onOpenSettings) {
-            Text("Abrir Configuración")
-        }
+        Button(onClick = onOpenSettings) { Text("Abrir Configuración") }
     }
 }
