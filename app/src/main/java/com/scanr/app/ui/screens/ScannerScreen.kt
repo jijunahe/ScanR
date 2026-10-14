@@ -1001,7 +1001,7 @@ fun ARCameraViewWithCapture(
                     }
                     
                     // Set frame update listener
-                    onFrame = { frame ->
+                    onSessionUpdated = { _, frame ->
                         try {
                             onTrackingStateChanged(frame.camera.trackingState)
                             if (isScanning && frame.camera.trackingState == TrackingState.TRACKING) {
@@ -1023,7 +1023,7 @@ fun ARCameraViewWithCapture(
         },
         update = { view ->
             if (view is ARSceneView) {
-                view.onFrame = { frame ->
+                view.onSessionUpdated = { _, frame ->
                     try {
                         onTrackingStateChanged(frame.camera.trackingState)
                         if (isScanning && frame.camera.trackingState == TrackingState.TRACKING) {
