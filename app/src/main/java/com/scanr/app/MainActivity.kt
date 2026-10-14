@@ -22,7 +22,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Camera
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.ThreeDRotation
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -128,7 +127,7 @@ fun HomeScreen(
             verticalArrangement = Arrangement.Center
         ) {
             Icon(
-                imageVector = Icons.Default.ThreeDRotation,
+                imageVector = Icons.Default.CameraAlt,
                 contentDescription = null,
                 modifier = Modifier.size(100.dp),
                 tint = MaterialTheme.colorScheme.primary
