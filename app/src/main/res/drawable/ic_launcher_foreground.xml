@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Cube 3D icon representing 3D scanning -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M54,24L78,38v30L54,82 30,68V38z"/>
+    <path
+        android:fillColor="#1976D2"
+        android:pathData="M54,24L78,38v30L54,82V24z"/>
+    <path
+        android:fillColor="#2196F3"
+        android:pathData="M54,24L30,38v30l24,14V24z"/>
+    <path
+        android:fillColor="#90CAF9"
+        android:pathData="M54,82l24,-14v-30L54,54z"/>
+    <path
+        android:fillColor="#BBDEFB"
+        android:pathData="M54,82L30,68V38l24,16z"/>
+    <!-- Scan line effect -->
+    <path
+        android:strokeColor="#4CAF50"
+        android:strokeWidth="1.5"
+        android:pathData="M38,50h32"/>
+    <path
+        android:strokeColor="#4CAF50"
+        android:strokeWidth="1.5"
+        android:pathData="M38,58h32"/>
+</vector>
