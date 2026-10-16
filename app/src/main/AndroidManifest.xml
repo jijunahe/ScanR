@@ -4,6 +4,7 @@
 
     <!-- Camera Permissions -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <!-- Storage Permissions for saving 3D meshes -->
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
@@ -47,6 +48,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
+        android:usesCleartextTraffic="true"
         android:theme="@style/Theme.ScanR"
         tools:targetApi="31">
 

@@ -49,6 +49,7 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import com.google.accompanist.permissions.shouldShowRationale
 import com.google.ar.core.ArCoreApk
+import com.scanr.app.ui.screens.GuidedCaptureScreen
 import com.scanr.app.ui.screens.ScannerScreen
 import com.scanr.app.ui.theme.ScanRTheme
 
@@ -156,9 +157,9 @@ fun ErrorScreen(
 fun ScanRApp() {
     val context = LocalContext.current
     var arCoreStatus by remember { mutableStateOf<String?>(null) }
-    var showScanner by remember { mutableStateOf(false) }
+    var screen by remember { mutableStateOf("home") }
     
-    Log.d("ScanR", "ScanRApp: showScanner=$showScanner")
+    Log.d("ScanR", "ScanRApp: screen=$screen")
     
     LaunchedEffect(Unit) {
         val availability = ArCoreApk.getInstance().checkAvailability(context)
@@ -180,21 +181,13 @@ fun ScanRApp() {
         }
         
         cameraPermissionState.status.isGranted -> {
-            if (showScanner) {
-                Log.d("ScanR", "Renderizando ScannerScreen...")
-                ScannerScreen(
-                    onBackPressed = { 
-                        showScanner = false 
-                    }
-                )
-            } else {
-                WelcomeScreen(
+            when (screen) {
+                "photos" -> GuidedCaptureScreen(onBackPressed = { screen = "home" })
+                "live" -> ScannerScreen(onBackPressed = { screen = "home" })
+                else -> WelcomeScreen(
                     arCoreStatus = arCoreStatus,
-                    onStartScanner = { 
-                        Log.d("ScanR", "Boton presionado!")
-                        Toast.makeText(context, "Iniciando...", Toast.LENGTH_SHORT).show()
-                        showScanner = true
-                    }
+                    onStartPhotos = { screen = "photos" },
+                    onStartScanner = { screen = "live" }
                 )
             }
         }
@@ -242,7 +235,11 @@ fun ARCoreErrorScreen(status: String) {
 }
 
 @Composable
-fun WelcomeScreen(arCoreStatus: String?, onStartScanner: () -> Unit) {
+fun WelcomeScreen(
+    arCoreStatus: String?,
+    onStartPhotos: () -> Unit,
+    onStartScanner: () -> Unit
+) {
     Column(
         modifier = Modifier.fillMaxSize().padding(32.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -257,7 +254,11 @@ fun WelcomeScreen(arCoreStatus: String?, onStartScanner: () -> Unit) {
         Spacer(modifier = Modifier.height(24.dp))
         Text(text = "ScanR", style = MaterialTheme.typography.headlineLarge)
         Spacer(modifier = Modifier.height(8.dp))
-        Text(text = "Escaneo 3D con ARCore", color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            text = "Fotos guiadas y modelo 3D en tu computador",
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
         if (arCoreStatus != null) {
             Spacer(modifier = Modifier.height(8.dp))
             Text(
@@ -267,8 +268,12 @@ fun WelcomeScreen(arCoreStatus: String?, onStartScanner: () -> Unit) {
             )
         }
         Spacer(modifier = Modifier.height(32.dp))
-        Button(onClick = onStartScanner) {
-            Text("Iniciar Escaneo")
+        Button(onClick = onStartPhotos, modifier = Modifier.fillMaxWidth()) {
+            Text("Fotografiar objeto")
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        Button(onClick = onStartScanner, modifier = Modifier.fillMaxWidth()) {
+            Text("Escaneo en vivo")
         }
     }
 }

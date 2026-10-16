@@ -1,6 +1,8 @@
 # ScanR
 
-Aplicación Android para escaneo y generación de mallas 3D usando la cámara y visión por computadora con ARCore. Compatible con Blender y otros software de modelado 3D.
+La app guía la vuelta de fotos alrededor de un objeto. El computador, con el programa de la carpeta `server`, reconstruye la superficie y devuelve un ZIP para Blender. La instalación del computador está en [server/README.md](server/README.md).
+
+También queda el escaneo en vivo anterior, que exporta una nube de puntos.
 
 ## Características
 
