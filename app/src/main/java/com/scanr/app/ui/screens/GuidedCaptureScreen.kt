@@ -33,9 +33,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
@@ -227,8 +227,9 @@ fun GuidedCaptureScreen(
                     label = { Text("Computador") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                     modifier = Modifier.weight(1f),
-                    colors = TextFieldDefaults.outlinedTextFieldColors(
-                        textColor = Color.White,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
                         cursorColor = Color.White,
                         focusedBorderColor = Color(0xFF69F0AE),
                         unfocusedBorderColor = Color.Gray,
