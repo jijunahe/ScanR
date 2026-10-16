@@ -1,6 +1,8 @@
 # ScanR
 
-La app guía la vuelta de fotos alrededor de un objeto. El computador, con el programa de la carpeta `server`, reconstruye la superficie y devuelve un ZIP para Blender. La instalación del computador está en [server/README.md](server/README.md).
+La app guía la vuelta de fotos alrededor de un objeto. El computador, con el programa de la carpeta `server`, reconstruye la superficie y devuelve un ZIP para Blender.
+
+Para un agente de IA en el computador, la guía de descarga, servidor y app Android está en [AGENTE.md](AGENTE.md). El resumen corto del servidor está en [server/README.md](server/README.md).
 
 También queda el escaneo en vivo anterior, que exporta una nube de puntos.
 
